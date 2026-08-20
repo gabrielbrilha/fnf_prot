@@ -4,7 +4,7 @@ extends Control
 # difficulty here and go straight to the songs for it. Every song plays with all
 # four lanes.
 
-const EDITOR_ENABLED: bool = true
+const EDITOR_ENABLED: bool = false
 
 const SONG_SELECT_SCENE: String = "res://levels/song_select.tscn"
 const HUD_FONT := preload("res://art/BubbleBoomRegular-e96nn.ttf")
