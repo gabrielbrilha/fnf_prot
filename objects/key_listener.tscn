@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://qql6gl3xh564"]
+
+[ext_resource type="Texture2D" uid="uid://ddvw4jkr5hkkg" path="res://art/arrows.webp" id="1_181ek"]
+[ext_resource type="Script" uid="uid://chheckreympeh" path="res://objects/key_listener.gd" id="2_vgigu"]
+
+[node name="KeyListener" type="Sprite2D" unique_id=211716949]
+position = Vector2(190, 171)
+texture = ExtResource("1_181ek")
+hframes = 4
+vframes = 3
+script = ExtResource("2_vgigu")
+
+[node name="RandomSpawnTimer" type="Timer" parent="." unique_id=858887606]
+one_shot = true
+autostart = true
+
+[node name="GlowOverlay" type="Sprite2D" parent="." unique_id=1272943585]
+texture = ExtResource("1_181ek")
+hframes = 4
+vframes = 3
+frame = 4
+
+[connection signal="timeout" from="RandomSpawnTimer" to="." method="_on_random_spawn_timer_timeout"]

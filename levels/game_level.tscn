@@ -1,0 +1,50 @@
+[gd_scene format=3 uid="uid://dka33g6sesi7s"]
+
+[ext_resource type="Texture2D" uid="uid://de66cbmvocex0" path="res://art/background.png" id="1_d65c1"]
+[ext_resource type="PackedScene" uid="uid://qql6gl3xh564" path="res://objects/key_listener.tscn" id="1_qc6i3"]
+[ext_resource type="PackedScene" uid="uid://bnowjq8n10sa0" path="res://levels/game_ui.tscn" id="2_sklrn"]
+[ext_resource type="PackedScene" uid="uid://dbtjmw3hyaah" path="res://objects/song_player.tscn" id="4_n0b0m"]
+[ext_resource type="PackedScene" path="res://levels/pause_menu.tscn" id="5_pause"]
+
+[sub_resource type="Environment" id="Environment_b00ph"]
+background_mode = 3
+glow_enabled = true
+
+[node name="GameLevel" type="Camera2D" unique_id=582523613]
+
+[node name="Background" type="Sprite2D" parent="." unique_id=1611062231]
+position = Vector2(91.00001, 115)
+scale = Vector2(0.6569141, 0.69625)
+texture = ExtResource("1_d65c1")
+
+[node name="KeyListener" parent="." unique_id=211716949 instance=ExtResource("1_qc6i3")]
+position = Vector2(-120, 289)
+key_name = "button_Q"
+
+[node name="KeyListener2" parent="." unique_id=988148975 instance=ExtResource("1_qc6i3")]
+position = Vector2(-40, 289)
+frame = 1
+key_name = "button_W"
+
+[node name="KeyListener3" parent="." unique_id=419644644 instance=ExtResource("1_qc6i3")]
+position = Vector2(40, 289)
+frame = 2
+key_name = "button_E"
+
+[node name="KeyListener4" parent="." unique_id=273592714 instance=ExtResource("1_qc6i3")]
+position = Vector2(120, 289)
+frame = 3
+key_name = "button_R"
+
+[node name="GameUI" parent="." unique_id=874277332 instance=ExtResource("2_sklrn")]
+offset_left = -551.0
+offset_top = -291.0
+offset_right = -551.0
+offset_bottom = -291.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1596783993]
+environment = SubResource("Environment_b00ph")
+
+[node name="LevelEditor" parent="." unique_id=773301737 instance=ExtResource("4_n0b0m")]
+
+[node name="PauseMenu" parent="." unique_id=900717358 instance=ExtResource("5_pause")]

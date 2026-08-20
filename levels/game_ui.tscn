@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://bnowjq8n10sa0"]
+
+[ext_resource type="Script" uid="uid://bgd6kvqtkodhf" path="res://levels/game_ui.gd" id="1_451jp"]
+[ext_resource type="FontFile" uid="uid://do2qkst3ohkss" path="res://art/BubbleBoomRegular-e96nn.ttf" id="2_tpbhn"]
+
+[node name="GameUI" type="Control" unique_id=874277332]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 438.0
+offset_top = 89.0
+offset_right = 438.0
+offset_bottom = 89.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_451jp")
+
+[node name="CanvasGroup" type="CanvasGroup" parent="." unique_id=1007615617]
+
+[node name="ScoreLabel" type="RichTextLabel" parent="CanvasGroup" unique_id=442996266]
+unique_name_in_owner = true
+offset_right = 317.0
+offset_bottom = 67.0
+theme_override_constants/outline_size = 14
+theme_override_fonts/normal_font = ExtResource("2_tpbhn")
+theme_override_font_sizes/normal_font_size = 71
+text = " 0 PTS"
+scroll_active = false
+
+[node name="ComboLabel" type="RichTextLabel" parent="CanvasGroup" unique_id=789052302]
+unique_name_in_owner = true
+offset_left = -5.0
+offset_top = 93.0
+offset_right = 312.0
+offset_bottom = 168.0
+theme_override_constants/outline_size = 14
+theme_override_fonts/normal_font = ExtResource("2_tpbhn")
+theme_override_font_sizes/normal_font_size = 71
+text = " 0x COMBO"
+scroll_active = false
+
+[node name="CheatLayer" type="CanvasLayer" parent="." unique_id=512939549]
+
+[node name="CheatLabel" type="RichTextLabel" parent="CheatLayer" unique_id=105224924]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -661.0
+offset_top = 17.0
+offset_right = -41.0
+offset_bottom = 97.0
+grow_horizontal = 0
+theme_override_constants/outline_size = 14
+theme_override_fonts/normal_font = ExtResource("2_tpbhn")
+theme_override_font_sizes/normal_font_size = 45
+bbcode_enabled = true
+text = "[right][img=45]res://art/cheat_icon.png[/img] CHEAT MODE"
+scroll_active = false

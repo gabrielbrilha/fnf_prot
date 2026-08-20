@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://bakpvwy6o33cu"
+path="res://.godot/imported/The White Stripes - Seven Nation Army (Instrumental Original) [9WkBBouqt8g].wav-4415a040a1b184b9459791cdcf6c7fd2.sample"
+
+[deps]
+
+source_file="res://music/The White Stripes - Seven Nation Army (Instrumental Original) [9WkBBouqt8g].wav"
+dest_files=["res://.godot/imported/The White Stripes - Seven Nation Army (Instrumental Original) [9WkBBouqt8g].wav-4415a040a1b184b9459791cdcf6c7fd2.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2
