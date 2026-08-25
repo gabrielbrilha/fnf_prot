@@ -46,6 +46,12 @@ func _ready() -> void:
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 
+	# LISTEN phase: input, hits and miss-detection are all frozen, so nothing
+	# scores, resets the combo, or misses -- even accidental presses. Notes keep
+	# falling (hidden behind the black screen) so they stay in time.
+	if GameState.listen_active:
+		return
+
 	# player-input marker: fires on the real key press for this lane whether or
 	# not a note is waiting.
 	if GameState.is_key_enabled(key_name) and not GameState.external_input \
@@ -148,7 +154,7 @@ func _try_hit(award: bool) -> void:
 # A press coming from the experimenter web panel. Only honored while
 # external-input mode is on; hits the note but awards no score/combo.
 func _on_external_key_pressed(button_name: String) -> void:
-	if not GameState.external_input:
+	if not GameState.external_input or GameState.listen_active:
 		return
 	if button_name != key_name or not GameState.is_key_enabled(key_name):
 		return

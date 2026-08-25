@@ -1,26 +1,42 @@
 extends Control
 
-# Timeline for the chart editor. Shows 4 lane rows across the song's duration
-# with a moving playhead and the placed notes. Top strip = seek; left-click a
-# lane = place; right-click a lane = delete nearest.
+# Timeline for the chart editor. Shows the 4 lane rows plus a 5th LISTEN row
+# across the song's duration, with a moving playhead. Top strip = seek;
+# left-click a lane = place; right-click a lane = delete nearest. On the LISTEN
+# row a left-click sets a span's start then its end (two clicks); right-click
+# deletes the span under the cursor. Notes can't go on the LISTEN row and spans
+# can't go on the note rows.
 
 signal seek_requested(t: float)
 signal place_requested(lane: int, t: float)
 signal delete_requested(lane: int, t: float)
 
 const RULER_H := 22.0
+const ROWS := 5                                   # 4 note lanes + 1 LISTEN row
+const LISTEN_ROW := 4
 const LANE_COLORS := [Color("f2d94e"), Color("46c8e0"), Color("5bd94a"), Color("e0559f")]
+const LISTEN_COLOR := Color("cfcfd6")
 
 var song_length: float = 0.0
 var playhead_time: float = 0.0
 var notes: Array = [[], [], [], []]
+var listen_windows: Array = []                    # [[start, end], ...] song time
+var listen_pending: float = -1.0                  # first click of a span, or -1
 
 func set_notes(n: Array) -> void:
 	notes = n
 	queue_redraw()
 
+func set_listen_windows(w: Array) -> void:
+	listen_windows = w
+	queue_redraw()
+
+func set_listen_pending(t: float) -> void:
+	listen_pending = t
+	queue_redraw()
+
 func _lane_height() -> float:
-	return max(1.0, (size.y - RULER_H) / 4.0)
+	return max(1.0, (size.y - RULER_H) / float(ROWS))
 
 func _time_to_x(t: float) -> float:
 	if song_length <= 0.0:
@@ -28,25 +44,41 @@ func _time_to_x(t: float) -> float:
 	return clampf(t / song_length, 0.0, 1.0) * size.x
 
 func _lane_at(y: float) -> int:
-	return clampi(int((y - RULER_H) / _lane_height()), 0, 3)
+	return clampi(int((y - RULER_H) / _lane_height()), 0, ROWS - 1)
+
+func _row_color(i: int) -> Color:
+	return LANE_COLORS[i] if i < 4 else LISTEN_COLOR
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("1b1b22"))
 	draw_rect(Rect2(0, 0, size.x, RULER_H), Color("2c2c38"))
 
 	var lane_h := _lane_height()
-	for i in 4:
+	for i in ROWS:
 		var y := RULER_H + i * lane_h
 		var band := Color(1, 1, 1, 0.03) if i % 2 == 0 else Color(1, 1, 1, 0.06)
 		draw_rect(Rect2(0, y, size.x, lane_h), band)
 		draw_line(Vector2(0, y), Vector2(size.x, y), Color(1, 1, 1, 0.15), 1.0)
-		draw_rect(Rect2(0, y, 6, lane_h), LANE_COLORS[i])
+		draw_rect(Rect2(0, y, 6, lane_h), _row_color(i))
 
+	# notes on the 4 lane rows
 	for i in 4:
 		var y := RULER_H + i * lane_h
 		for t in notes[i]:
 			var x := _time_to_x(t)
 			draw_rect(Rect2(x - 2, y + 3, 4, lane_h - 6), LANE_COLORS[i])
+
+	# LISTEN spans on the 5th row (shaded blocks), plus a pending-start marker
+	var ly := RULER_H + LISTEN_ROW * lane_h
+	for w in listen_windows:
+		if w.size() >= 2:
+			var x0 := _time_to_x(float(w[0]))
+			var x1 := _time_to_x(float(w[1]))
+			draw_rect(Rect2(x0, ly + 3, max(2.0, x1 - x0), lane_h - 6), Color(LISTEN_COLOR, 0.30))
+			draw_rect(Rect2(x0, ly + 3, max(2.0, x1 - x0), lane_h - 6), Color(LISTEN_COLOR, 0.8), false, 1.0)
+	if listen_pending >= 0.0:
+		var xp := _time_to_x(listen_pending)
+		draw_line(Vector2(xp, ly), Vector2(xp, ly + lane_h), Color("ffd24a"), 2.0)
 
 	var px := _time_to_x(playhead_time)
 	draw_line(Vector2(px, 0), Vector2(px, size.y), Color.WHITE, 2.0)

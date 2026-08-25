@@ -5,7 +5,20 @@ const ALL_KEYS: Array[String] = ["button_Q", "button_W", "button_E", "button_R"]
 # Seconds a falling arrow takes to travel from spawn to the hit line
 const FALL_TIME: float = 2.2
 
+# Master switch for the in-game level editor: the "Level Editor" menu button and
+# the per-song pencil (edit) buttons all check this.
+const EDITOR_ENABLED: bool = false
+
 var selected_song_id: String = ""
+
+# When set, the chart editor opens editing this existing level instead of a new
+# one. Cleared by the editor once it has loaded it.
+var edit_level_id: String = ""
+
+# True while a LISTEN screen is up: black screen, input frozen, and no score or
+# combo change (even accidental presses). Driven by song_player from the level's
+# listen_windows.
+var listen_active: bool = false
 
 # When true the game auto-plays the notes
 # no score or combo

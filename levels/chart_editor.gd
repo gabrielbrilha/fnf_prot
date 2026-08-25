@@ -1,6 +1,6 @@
 extends Control
 
-# In-game chart editor. Pick a name/zone/difficulty/music, then place notes on a
+# In-game chart editor. Pick a name/difficulty/music, then place notes on a
 # timeline (tap Q/W/E/R while it plays, or click a lane), scrub and slow the music
 # down for accuracy, and Save -> writes a JSON level via LevelLibrary that shows
 # up in the picker on the next run.
@@ -8,8 +8,8 @@ extends Control
 const MODE_SELECT_SCENE := "res://levels/mode_select.tscn"
 const TimelineBar := preload("res://levels/timeline_bar.gd")
 
-const ZONES := ["NORMAL", "LEFT", "DOWN", "UP", "RIGHT", "LEFT_RIGHT", "UP_DOWN"]
-const DIFFICULTIES := ["EASY", "MEDIUM", "HARD"]
+# zones were removed from the game; saved levels just use "NORMAL"
+const DIFFICULTIES := ["EASY", "MEDIUM", "HARD", "CALIBRATE"]
 const SPEEDS := [0.25, 0.5, 1.0]
 const LANE_ACTIONS := ["button_Q", "button_W", "button_E", "button_R"]
 const LANE_NAMES := ["Left (Q)", "Down (W)", "Up (E)", "Right (R)"]
@@ -17,13 +17,16 @@ const LANE_NAMES := ["Left (Q)", "Down (W)", "Up (E)", "Right (R)"]
 var music: AudioStreamPlayer
 var timeline
 var name_edit: LineEdit
-var zone_option: OptionButton
 var diff_option: OptionButton
 var music_option: OptionButton
 var status_label: Label
 
 var note_times: Array = [[], [], [], []]   # per lane: HIT times (song seconds)
 var last_added: Array = []                 # [lane, t] stack for Undo
+
+var listen_windows: Array = []             # [[start, end], ...] song seconds
+var listen_pending: float = -1.0           # first click of a LISTEN span, or -1
+var loaded_id: String = ""                 # set when editing an existing level
 
 var current_music_path: String = ""
 var song_length: float = 0.0
@@ -37,6 +40,11 @@ func _ready() -> void:
 	music.finished.connect(_on_music_finished)
 	_build_ui()
 	_list_music()
+
+	# opened via a pencil button -> load that level for editing
+	if GameState.edit_level_id != "":
+		_load_existing(GameState.edit_level_id)
+		GameState.edit_level_id = ""
 
 func _process(_delta: float) -> void:
 	if is_playing:
@@ -68,7 +76,7 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 28)
 	root.add_child(title)
 
-	# --- setup row: name / zone / difficulty ---
+	# --- setup row: name / difficulty ---
 	var setup := HBoxContainer.new()
 	setup.add_theme_constant_override("separation", 8)
 	root.add_child(setup)
@@ -78,13 +86,6 @@ func _build_ui() -> void:
 	name_edit.placeholder_text = "Level name"
 	name_edit.custom_minimum_size = Vector2(220, 0)
 	setup.add_child(name_edit)
-
-	setup.add_child(_label("Zone:"))
-	zone_option = OptionButton.new()
-	for z in ZONES:
-		zone_option.add_item(z)
-	zone_option.selected = ZONES.find("LEFT_RIGHT")
-	setup.add_child(zone_option)
 
 	setup.add_child(_label("Difficulty:"))
 	diff_option = OptionButton.new()
@@ -113,6 +114,10 @@ func _build_ui() -> void:
 		swatch.text = "■ " + LANE_NAMES[i]
 		swatch.add_theme_color_override("font_color", TimelineBar.LANE_COLORS[i])
 		legend.add_child(swatch)
+	var listen_swatch := Label.new()
+	listen_swatch.text = "■ LISTEN"
+	listen_swatch.add_theme_color_override("font_color", TimelineBar.LISTEN_COLOR)
+	legend.add_child(listen_swatch)
 
 	# --- timeline ---
 	timeline = TimelineBar.new()
@@ -123,6 +128,7 @@ func _build_ui() -> void:
 	timeline.place_requested.connect(_on_place)
 	timeline.delete_requested.connect(_on_delete)
 	root.add_child(timeline)
+	timeline.set_listen_windows(listen_windows)
 
 	# --- transport row ---
 	var transport := HBoxContainer.new()
@@ -155,7 +161,7 @@ func _build_ui() -> void:
 	bottom.add_child(status_label)
 
 	var hint := Label.new()
-	hint.text = "Play the music and tap Q/W/E/R to place notes. Click a lane to place, right-click to delete, click the top strip to seek. Slow the speed down for accuracy."
+	hint.text = "Play the music and tap Q/W/E/R to place notes. Click a lane to place, right-click to delete, click the top strip to seek. On the LISTEN row, click once for a span's start then again for its end (right-click a span to delete). Slow the speed down for accuracy."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(hint)
 
@@ -251,9 +257,41 @@ func _add_note(lane: int, t: float) -> void:
 	_update_status()
 
 func _on_place(lane: int, t: float) -> void:
-	_add_note(lane, t)
+	if lane == TimelineBar.LISTEN_ROW:
+		_listen_click(t)
+	else:
+		_add_note(lane, t)
+
+# Two-click LISTEN span placement: first click sets the start, second the end.
+func _listen_click(t: float) -> void:
+	if listen_pending < 0.0:
+		listen_pending = t
+		timeline.set_listen_pending(t)
+		_update_status()
+		return
+	var s: float = min(listen_pending, t)
+	var e: float = max(listen_pending, t)
+	listen_pending = -1.0
+	timeline.set_listen_pending(-1.0)
+	if e - s > 0.01:
+		listen_windows.append([snappedf(s, 0.0001), snappedf(e, 0.0001)])
+		listen_windows.sort_custom(func(a, b): return a[0] < b[0])
+		timeline.set_listen_windows(listen_windows)
+	_update_status()
+
+func _delete_listen(t: float) -> void:
+	for i in listen_windows.size():
+		var w = listen_windows[i]
+		if t >= w[0] and t <= w[1]:
+			listen_windows.remove_at(i)
+			timeline.set_listen_windows(listen_windows)
+			_update_status()
+			return
 
 func _on_delete(lane: int, t: float) -> void:
+	if lane == TimelineBar.LISTEN_ROW:
+		_delete_listen(t)
+		return
 	var best := -1
 	var best_dist := 0.3
 	for i in note_times[lane].size():
@@ -285,7 +323,9 @@ func _on_clear() -> void:
 # ---------------------------------------------------------------- save
 
 func _on_save() -> void:
-	var id := _sanitize_id(name_edit.text)
+	# editing an existing level keeps its id (overwrites in place); a new level
+	# derives the id from the name
+	var id := loaded_id if loaded_id != "" else _sanitize_id(name_edit.text)
 	if id == "":
 		status_label.text = "Enter a name first."
 		return
@@ -307,10 +347,11 @@ func _on_save() -> void:
 	var data := {
 		"id": id,
 		"title": name_edit.text.strip_edges(),
-		"zone": ZONES[zone_option.selected],
+		"zone": "NORMAL",
 		"difficulty": DIFFICULTIES[diff_option.selected],
 		"music": current_music_path,
 		"fk_times": fk_times,
+		"listen_windows": listen_windows,
 	}
 
 	var path := LevelLibrary.save_level(id, data)
@@ -333,11 +374,48 @@ func _total_notes() -> int:
 	return n
 
 func _update_status() -> void:
-	if status_label:
-		var counts := []
-		for lane in note_times:
-			counts.append(lane.size())
-		status_label.text = "Notes L/D/U/R: %s   length: %.1fs" % [str(counts), song_length]
+	if not status_label:
+		return
+	var counts := []
+	for lane in note_times:
+		counts.append(lane.size())
+	var extra := ""
+	if listen_pending >= 0.0:
+		extra = "   [LISTEN start @ %.2fs - click end]" % listen_pending
+	status_label.text = "Notes L/D/U/R: %s   LISTEN: %d   length: %.1fs%s" % [
+		str(counts), listen_windows.size(), song_length, extra]
+
+# Load an existing level into the editor (from a pencil button). Notes are stored
+# as spawn times but edited as hit times, so convert on the way in.
+func _load_existing(id: String) -> void:
+	var level = LevelLibrary.get_level(id)
+	if level.is_empty():
+		return
+	loaded_id = id
+	name_edit.text = str(level.get("title", ""))
+
+	var di: int = DIFFICULTIES.find(str(level.get("difficulty", "")))
+	diff_option.selected = di if di >= 0 else 0
+
+	var mpath := str(level.get("music", ""))
+	for i in music_option.get_item_count():
+		if music_option.get_item_metadata(i) == mpath:
+			music_option.selected = i
+			_load_music(mpath)
+			break
+
+	note_times = [[], [], [], []]
+	var fk = level.get("fk_times", [[], [], [], []])
+	for lane in 4:
+		if lane < fk.size():
+			for spawn in fk[lane]:
+				note_times[lane].append(float(spawn) + GameState.FALL_TIME)
+	last_added.clear()
+	timeline.set_notes(note_times)
+
+	listen_windows = level.get("listen_windows", []).duplicate(true)
+	timeline.set_listen_windows(listen_windows)
+	_update_status()
 
 func _on_back() -> void:
 	get_tree().change_scene_to_file(MODE_SELECT_SCENE)

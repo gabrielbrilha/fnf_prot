@@ -5,6 +5,7 @@ extends Control
 
 const GAME_LEVEL_SCENE: String = "res://levels/game_level.tscn"
 const MODE_SELECT_SCENE: String = "res://levels/mode_select.tscn"
+const CHART_EDITOR_SCENE: String = "res://levels/chart_editor.tscn"
 
 func _ready() -> void:
 	var center := CenterContainer.new()
@@ -39,11 +40,24 @@ func _ready() -> void:
 		vbox.add_child(empty)
 	else:
 		for id in song_ids:
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 6)
+			vbox.add_child(row)
+
 			var button := Button.new()
 			button.text = LevelLibrary.get_all()[id]["title"]
 			button.custom_minimum_size = Vector2(280, 44)
 			button.pressed.connect(_on_song_selected.bind(id))
-			vbox.add_child(button)
+			row.add_child(button)
+
+			# pencil (edit) button, only while the level editor is enabled
+			if GameState.EDITOR_ENABLED:
+				var edit := Button.new()
+				edit.text = "✏"
+				edit.tooltip_text = "Edit in level editor"
+				edit.custom_minimum_size = Vector2(44, 44)
+				edit.pressed.connect(_on_edit_pressed.bind(id))
+				row.add_child(edit)
 
 	# Back to the difficulty menu to choose a different difficulty
 	var back := Button.new()
@@ -64,6 +78,10 @@ func _songs_for_difficulty() -> Array:
 func _on_song_selected(song_id: String) -> void:
 	GameState.selected_song_id = song_id
 	get_tree().change_scene_to_file(GAME_LEVEL_SCENE)
+
+func _on_edit_pressed(song_id: String) -> void:
+	GameState.edit_level_id = song_id
+	get_tree().change_scene_to_file(CHART_EDITOR_SCENE)
 
 func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file(MODE_SELECT_SCENE)

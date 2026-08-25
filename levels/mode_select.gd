@@ -4,10 +4,11 @@ extends Control
 # difficulty here and go straight to the songs for it. Every song plays with all
 # four lanes.
 
-const EDITOR_ENABLED: bool = false
-
 const SONG_SELECT_SCENE: String = "res://levels/song_select.tscn"
 const HUD_FONT := preload("res://art/BubbleBoomRegular-e96nn.ttf")
+
+# special difficulty value for tutorial / calibration songs
+const CALIBRATE_ID: String = "CALIBRATE"
 
 # "id" must match the song "difficulty" field; "color" is the button colour
 var difficulty_options: Array[Dictionary] = [
@@ -18,6 +19,7 @@ var difficulty_options: Array[Dictionary] = [
 
 func _ready() -> void:
 	_build_menu()
+	_build_calibrate_button()
 
 func _build_menu() -> void:
 	var center := CenterContainer.new()
@@ -54,7 +56,7 @@ func _build_menu() -> void:
 		vbox.add_child(button)
 
 	# Level Editor entry (dev-only)
-	if EDITOR_ENABLED:
+	if GameState.EDITOR_ENABLED:
 		var editor_spacer := Control.new()
 		editor_spacer.custom_minimum_size = Vector2(0, 12)
 		vbox.add_child(editor_spacer)
@@ -65,9 +67,34 @@ func _build_menu() -> void:
 		editor_button.pressed.connect(_on_editor_pressed)
 		vbox.add_child(editor_button)
 
+# "Calibrate" button pinned to the top-right corner: its own category of
+# tutorial/calibration songs (difficulty "CALIBRATE"), separate from the
+# EASY/MEDIUM/HARD picker.
+func _build_calibrate_button() -> void:
+	var button := Button.new()
+	button.text = "Calibrate"
+	button.add_theme_font_override("font", HUD_FONT)
+	button.add_theme_font_size_override("font_size", 26)
+	button.anchor_left = 1.0
+	button.anchor_right = 1.0
+	button.anchor_top = 0.0
+	button.anchor_bottom = 0.0
+	button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	button.offset_left = -200.0
+	button.offset_top = 20.0
+	button.offset_right = -20.0
+	button.offset_bottom = 68.0
+	button.pressed.connect(_on_calibrate_pressed)
+	add_child(button)
+
 func _on_difficulty_selected(difficulty_id: String) -> void:
 	GameState.selected_difficulty = difficulty_id
 	get_tree().change_scene_to_file(SONG_SELECT_SCENE)
 
+func _on_calibrate_pressed() -> void:
+	GameState.selected_difficulty = CALIBRATE_ID
+	get_tree().change_scene_to_file(SONG_SELECT_SCENE)
+
 func _on_editor_pressed() -> void:
+	GameState.edit_level_id = ""   # new level, not editing an existing one
 	get_tree().change_scene_to_file("res://levels/chart_editor.tscn")

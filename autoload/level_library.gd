@@ -53,7 +53,22 @@ func _normalize(lvl: Dictionary) -> Dictionary:
 		"difficulty": str(lvl.get("difficulty", "")),
 		"music": str(lvl.get("music", "")),
 		"fk_times": fk,
+		# [[start, end], ...] song-time spans that show a LISTEN screen
+		"listen_windows": _norm_windows(lvl.get("listen_windows", [])),
 	}
+
+# Keep only valid [start, end] pairs (end > start), as floats.
+func _norm_windows(raw) -> Array:
+	var out: Array = []
+	if typeof(raw) != TYPE_ARRAY:
+		return out
+	for w in raw:
+		if typeof(w) == TYPE_ARRAY and w.size() >= 2:
+			var s := float(w[0])
+			var e := float(w[1])
+			if e > s:
+				out.append([s, e])
+	return out
 
 func _ensure_dir() -> void:
 	if not DirAccess.dir_exists_absolute(LEVELS_DIR):
