@@ -1,6 +1,12 @@
 {
+	"id": "C_LEVEL_3_DOWN",
+	"title": "C-Level_3 Down",
 	"difficulty": "CALIBRATE",
+	"music": "res://music/part3.wav",
+	"zone": "NORMAL",
+	"calibrate_direction": 1,
 	"fk_times": [
+		[],
 		[
 			2.654,
 			2.8629,
@@ -88,12 +94,7 @@
 			62.3141
 		],
 		[],
-		[],
 		[]
 	],
-	"id": "C_LEVEL_3",
-	"listen_windows": [],
-	"music": "res://music/part3.wav",
-	"title": "C-Level_3",
-	"zone": "NORMAL"
+	"listen_windows": []
 }

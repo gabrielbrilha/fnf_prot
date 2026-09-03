@@ -55,7 +55,25 @@ func _normalize(lvl: Dictionary) -> Dictionary:
 		"fk_times": fk,
 		# [[start, end], ...] song-time spans that show a LISTEN screen
 		"listen_windows": _norm_windows(lvl.get("listen_windows", [])),
+		# For CALIBRATE levels: the single lane this chart plays on
+		# (0=Left, 1=Down, 2=Up, 3=Right). Explicit field wins; otherwise it's
+		# inferred from the only non-empty lane. -1 when it can't be determined.
+		"calibrate_direction": _calibrate_direction(lvl, fk),
 	}
+
+# Lane a calibrate chart plays on: the stored field if valid, else inferred from
+# fk_times when exactly one lane has notes.
+func _calibrate_direction(lvl: Dictionary, fk: Array) -> int:
+	var stored := int(lvl.get("calibrate_direction", -1))
+	if stored >= 0 and stored <= 3:
+		return stored
+	var only := -1
+	for lane in 4:
+		if lane < fk.size() and fk[lane].size() > 0:
+			if only >= 0:
+				return -1   # notes on more than one lane -> ambiguous
+			only = lane
+	return only
 
 # Keep only valid [start, end] pairs (end > start), as floats.
 func _norm_windows(raw) -> Array:

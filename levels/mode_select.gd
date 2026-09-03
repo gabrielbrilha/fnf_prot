@@ -5,10 +5,8 @@ extends Control
 # four lanes.
 
 const SONG_SELECT_SCENE: String = "res://levels/song_select.tscn"
+const CALIBRATE_SELECT_SCENE: String = "res://levels/calibrate_select.tscn"
 const HUD_FONT := preload("res://art/BubbleBoomRegular-e96nn.ttf")
-
-# special difficulty value for tutorial / calibration songs
-const CALIBRATE_ID: String = "CALIBRATE"
 
 # "id" must match the song "difficulty" field; "color" is the button colour
 var difficulty_options: Array[Dictionary] = [
@@ -89,11 +87,14 @@ func _build_calibrate_button() -> void:
 
 func _on_difficulty_selected(difficulty_id: String) -> void:
 	GameState.selected_difficulty = difficulty_id
+	GameState.calibrate_direction = -1   # only calibrate mode remaps lanes
 	get_tree().change_scene_to_file(SONG_SELECT_SCENE)
 
+# Calibrate first asks which direction to calibrate, then shows the songs.
 func _on_calibrate_pressed() -> void:
-	GameState.selected_difficulty = CALIBRATE_ID
-	get_tree().change_scene_to_file(SONG_SELECT_SCENE)
+	GameState.selected_difficulty = GameState.CALIBRATE_ID
+	GameState.calibrate_direction = -1
+	get_tree().change_scene_to_file(CALIBRATE_SELECT_SCENE)
 
 func _on_editor_pressed() -> void:
 	GameState.edit_level_id = ""   # new level, not editing an existing one

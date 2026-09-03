@@ -10,9 +10,13 @@ const TimelineBar := preload("res://levels/timeline_bar.gd")
 
 # zones were removed from the game; saved levels just use "NORMAL"
 const DIFFICULTIES := ["EASY", "MEDIUM", "HARD", "CALIBRATE"]
+const CALIBRATE := "CALIBRATE"
 const SPEEDS := [0.25, 0.5, 1.0]
 const LANE_ACTIONS := ["button_Q", "button_W", "button_E", "button_R"]
 const LANE_NAMES := ["Left (Q)", "Down (W)", "Up (E)", "Right (R)"]
+# per-direction level generation (lane order 0=Left, 1=Down, 2=Up, 3=Right)
+const DIR_NAMES := ["Left", "Down", "Up", "Right"]
+const DIR_SUFFIX := ["LEFT", "DOWN", "UP", "RIGHT"]
 
 var music: AudioStreamPlayer
 var timeline
@@ -20,6 +24,7 @@ var name_edit: LineEdit
 var diff_option: OptionButton
 var music_option: OptionButton
 var status_label: Label
+var legend_box: HBoxContainer
 
 var note_times: Array = [[], [], [], []]   # per lane: HIT times (song seconds)
 var last_added: Array = []                 # [lane, t] stack for Undo
@@ -27,6 +32,9 @@ var last_added: Array = []                 # [lane, t] stack for Undo
 var listen_windows: Array = []             # [[start, end], ...] song seconds
 var listen_pending: float = -1.0           # first click of a LISTEN span, or -1
 var loaded_id: String = ""                 # set when editing an existing level
+# When editing an existing CALIBRATE level, the lane/direction it belongs to
+# (0-3). -1 for new levels or non-calibrate levels.
+var loaded_direction: int = -1
 
 var current_music_path: String = ""
 var song_length: float = 0.0
@@ -92,6 +100,7 @@ func _build_ui() -> void:
 	for d in DIFFICULTIES:
 		diff_option.add_item(d)
 	diff_option.selected = DIFFICULTIES.find("MEDIUM")
+	diff_option.item_selected.connect(_on_difficulty_changed)
 	setup.add_child(diff_option)
 
 	# --- music row ---
@@ -105,19 +114,11 @@ func _build_ui() -> void:
 	music_option.item_selected.connect(_on_music_selected)
 	music_row.add_child(music_option)
 
-	# --- legend ---
-	var legend := HBoxContainer.new()
-	legend.add_theme_constant_override("separation", 16)
-	root.add_child(legend)
-	for i in 4:
-		var swatch := Label.new()
-		swatch.text = "■ " + LANE_NAMES[i]
-		swatch.add_theme_color_override("font_color", TimelineBar.LANE_COLORS[i])
-		legend.add_child(swatch)
-	var listen_swatch := Label.new()
-	listen_swatch.text = "■ LISTEN"
-	listen_swatch.add_theme_color_override("font_color", TimelineBar.LISTEN_COLOR)
-	legend.add_child(listen_swatch)
+	# --- legend (rebuilt when difficulty toggles calibrate mode) ---
+	legend_box = HBoxContainer.new()
+	legend_box.add_theme_constant_override("separation", 16)
+	root.add_child(legend_box)
+	_refresh_legend()
 
 	# --- timeline ---
 	timeline = TimelineBar.new()
@@ -129,6 +130,7 @@ func _build_ui() -> void:
 	timeline.delete_requested.connect(_on_delete)
 	root.add_child(timeline)
 	timeline.set_listen_windows(listen_windows)
+	timeline.set_single_lane(_is_calibrate())
 
 	# --- transport row ---
 	var transport := HBoxContainer.new()
@@ -178,6 +180,49 @@ func _button(text: String, handler: Callable) -> Button:
 	b.custom_minimum_size = Vector2(90, 36)
 	b.pressed.connect(handler)
 	return b
+
+# ---------------------------------------------------------------- calibrate mode
+
+func _is_calibrate() -> bool:
+	return diff_option != null and DIFFICULTIES[diff_option.selected] == CALIBRATE
+
+# In calibrate mode only a single generic note lane is shown; the four QWER lanes
+# collapse to lane 0 and Save fans out to one level per direction.
+func _refresh_legend() -> void:
+	if legend_box == null:
+		return
+	for c in legend_box.get_children():
+		c.queue_free()
+	if _is_calibrate():
+		var arrow := Label.new()
+		arrow.text = "■ ARROW (Q/W/E/R)"
+		arrow.add_theme_color_override("font_color", TimelineBar.CALIBRATE_NOTE_COLOR)
+		legend_box.add_child(arrow)
+	else:
+		for i in 4:
+			var swatch := Label.new()
+			swatch.text = "■ " + LANE_NAMES[i]
+			swatch.add_theme_color_override("font_color", TimelineBar.LANE_COLORS[i])
+			legend_box.add_child(swatch)
+	var listen_swatch := Label.new()
+	listen_swatch.text = "■ LISTEN"
+	listen_swatch.add_theme_color_override("font_color", TimelineBar.LISTEN_COLOR)
+	legend_box.add_child(listen_swatch)
+
+func _on_difficulty_changed(_idx: int) -> void:
+	if _is_calibrate():
+		# fold any notes already placed onto the single generic lane
+		var merged: Array = []
+		for lane in 4:
+			for t in note_times[lane]:
+				merged.append(t)
+		merged.sort()
+		note_times = [merged, [], [], []]
+		last_added.clear()
+		timeline.set_notes(note_times)
+	timeline.set_single_lane(_is_calibrate())
+	_refresh_legend()
+	_update_status()
 
 # ---------------------------------------------------------------- music
 
@@ -248,7 +293,8 @@ func _place_from_keys() -> void:
 		return
 	for lane in 4:
 		if Input.is_action_just_pressed(LANE_ACTIONS[lane]):
-			_add_note(lane, current_time)
+			# calibrate charts use one generic lane, so any arrow key places there
+			_add_note(0 if _is_calibrate() else lane, current_time)
 
 func _add_note(lane: int, t: float) -> void:
 	note_times[lane].append(t)
@@ -257,7 +303,7 @@ func _add_note(lane: int, t: float) -> void:
 	_update_status()
 
 func _on_place(lane: int, t: float) -> void:
-	if lane == TimelineBar.LISTEN_ROW:
+	if lane == timeline.listen_row():
 		_listen_click(t)
 	else:
 		_add_note(lane, t)
@@ -289,7 +335,7 @@ func _delete_listen(t: float) -> void:
 			return
 
 func _on_delete(lane: int, t: float) -> void:
-	if lane == TimelineBar.LISTEN_ROW:
+	if lane == timeline.listen_row():
 		_delete_listen(t)
 		return
 	var best := -1
@@ -323,29 +369,25 @@ func _on_clear() -> void:
 # ---------------------------------------------------------------- save
 
 func _on_save() -> void:
-	# editing an existing level keeps its id (overwrites in place); a new level
-	# derives the id from the name
-	var id := loaded_id if loaded_id != "" else _sanitize_id(name_edit.text)
-	if id == "":
+	var base_id := loaded_id if loaded_id != "" else _sanitize_id(name_edit.text)
+	if base_id == "":
 		status_label.text = "Enter a name first."
 		return
 	if current_music_path == "":
 		status_label.text = "Pick a music file first."
 		return
 
+	if _is_calibrate():
+		_save_calibrate(base_id)
+		return
+
 	# store spawn times (hit time - fall time), dropping any that can't fit on screen
 	var fk_times := [[], [], [], []]
 	for lane in 4:
-		var arr := []
-		for t in note_times[lane]:
-			var spawn: float = t - GameState.FALL_TIME
-			if spawn >= 0.0:
-				arr.append(snappedf(spawn, 0.0001))
-		arr.sort()
-		fk_times[lane] = arr
+		fk_times[lane] = _spawns(note_times[lane])
 
 	var data := {
-		"id": id,
+		"id": base_id,
 		"title": name_edit.text.strip_edges(),
 		"zone": "NORMAL",
 		"difficulty": DIFFICULTIES[diff_option.selected],
@@ -354,9 +396,58 @@ func _on_save() -> void:
 		"listen_windows": listen_windows,
 	}
 
-	var path := LevelLibrary.save_level(id, data)
+	var path := LevelLibrary.save_level(base_id, data)
 	status_label.text = ("Saved '%s' (%d notes) -> %s" %
-		[id, _total_notes(), path]) if path != "" else "Save failed."
+		[base_id, _total_notes(), path]) if path != "" else "Save failed."
+
+# Calibrate save. A new chart (authored on the single generic lane) fans out to
+# four levels, one per direction, each with the notes on that direction's lane
+# and a default per-direction name you can rename later. Editing an existing
+# calibrate level saves just that one direction in place.
+func _save_calibrate(base_id: String) -> void:
+	var spawns := _spawns(note_times[0])
+
+	if loaded_id != "":
+		var lane: int = loaded_direction if loaded_direction >= 0 else 0
+		var path := LevelLibrary.save_level(loaded_id, _calibrate_data(
+			loaded_id, name_edit.text.strip_edges(), lane, spawns))
+		status_label.text = ("Saved '%s' (%s, %d notes) -> %s" %
+			[loaded_id, DIR_NAMES[lane], spawns.size(), path]) if path != "" else "Save failed."
+		return
+
+	var base_title := name_edit.text.strip_edges()
+	var saved := 0
+	for lane in 4:
+		var id: String = base_id + "_" + DIR_SUFFIX[lane]
+		var title: String = base_title + " " + DIR_NAMES[lane]
+		if LevelLibrary.save_level(id, _calibrate_data(id, title, lane, spawns)) != "":
+			saved += 1
+	status_label.text = "Saved %d calibrate levels (%d notes each)." % [saved, spawns.size()]
+
+# Build one per-direction calibrate level dictionary.
+func _calibrate_data(id: String, title: String, lane: int, spawns: Array) -> Dictionary:
+	var fk := [[], [], [], []]
+	fk[lane] = spawns
+	return {
+		"id": id,
+		"title": title,
+		"zone": "NORMAL",
+		"difficulty": CALIBRATE,
+		"music": current_music_path,
+		"fk_times": fk,
+		"listen_windows": listen_windows,
+		"calibrate_direction": lane,
+	}
+
+# Convert hit times to on-screen spawn times, dropping any that start before 0.
+func _spawns(hit_times: Array) -> Array:
+	var arr := []
+	for t in hit_times:
+		var spawn: float = t - GameState.FALL_TIME
+		if spawn >= 0.0:
+			arr.append(snappedf(spawn, 0.0001))
+	arr.sort()
+	return arr
 
 func _sanitize_id(raw: String) -> String:
 	var out := ""
@@ -382,8 +473,13 @@ func _update_status() -> void:
 	var extra := ""
 	if listen_pending >= 0.0:
 		extra = "   [LISTEN start @ %.2fs - click end]" % listen_pending
-	status_label.text = "Notes L/D/U/R: %s   LISTEN: %d   length: %.1fs%s" % [
-		str(counts), listen_windows.size(), song_length, extra]
+	if _is_calibrate():
+		var target: String = "-> 4 directions" if loaded_id == "" else ("-> " + DIR_NAMES[loaded_direction if loaded_direction >= 0 else 0])
+		status_label.text = "Arrow notes: %d %s   LISTEN: %d   length: %.1fs%s" % [
+			counts[0], target, listen_windows.size(), song_length, extra]
+	else:
+		status_label.text = "Notes L/D/U/R: %s   LISTEN: %d   length: %.1fs%s" % [
+			str(counts), listen_windows.size(), song_length, extra]
 
 # Load an existing level into the editor (from a pencil button). Notes are stored
 # as spawn times but edited as hit times, so convert on the way in.
@@ -410,8 +506,23 @@ func _load_existing(id: String) -> void:
 		if lane < fk.size():
 			for spawn in fk[lane]:
 				note_times[lane].append(float(spawn) + GameState.FALL_TIME)
+
+	# calibrate levels edit on the single generic lane: fold this direction's
+	# notes onto lane 0 and remember which direction we're editing
+	loaded_direction = -1
+	if _is_calibrate():
+		loaded_direction = int(level.get("calibrate_direction", -1))
+		var merged: Array = []
+		for lane in 4:
+			for t in note_times[lane]:
+				merged.append(t)
+		merged.sort()
+		note_times = [merged, [], [], []]
+
 	last_added.clear()
 	timeline.set_notes(note_times)
+	timeline.set_single_lane(_is_calibrate())
+	_refresh_legend()
 
 	listen_windows = level.get("listen_windows", []).duplicate(true)
 	timeline.set_listen_windows(listen_windows)
