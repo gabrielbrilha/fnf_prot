@@ -89,12 +89,12 @@ var selected_difficulty: String = ""
 # Special "difficulty" value for tutorial / calibration songs.
 const CALIBRATE_ID: String = "CALIBRATE"
 
-# In calibrate mode the player first picks a single direction to calibrate.
-# Lane index of that direction (0=Left/Q, 1=Down/W, 2=Up/E, 3=Right/R), or -1
-# when no direction is chosen (i.e. not calibrating). Calibrate levels are real
-# per-direction files, so this only filters the song list to the chosen
-# direction -- it does not remap anything at play time.
-var calibrate_direction: int = -1
+# In calibrate mode the player picks a level number (1/2/3) then a mode
+# (music / no_music). These together filter the song list shown in song_select.
+# calibrate_level: 1, 2, or 3; -1 = not yet chosen.
+# calibrate_mode:  "music" | "no_music" | "" = not yet chosen.
+var calibrate_level: int = -1
+var calibrate_mode: String = ""
 
 func has_difficulty() -> bool:
 	return selected_difficulty != ""
