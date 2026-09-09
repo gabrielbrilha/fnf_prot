@@ -1,11 +1,9 @@
 {
-	"id": "C_LEVEL_3_LEFT",
-	"title": "C-Level_3 Left",
+	"calibrate_direction": 2,
 	"difficulty": "CALIBRATE",
-	"music": "res://music/part3.wav",
-	"zone": "NORMAL",
-	"calibrate_direction": 0,
 	"fk_times": [
+		[],
+		[],
 		[
 			2.654,
 			2.8629,
@@ -92,9 +90,44 @@
 			62.0587,
 			62.3141
 		],
-		[],
-		[],
 		[]
 	],
-	"listen_windows": []
+	"id": "C_LEVEL_3_UP",
+	"listen_windows": [
+		[
+			0.0195,
+			4.5348
+		],
+		[
+			8.83,
+			12.5744
+		],
+		[
+			16.6126,
+			20.5773
+		],
+		[
+			23.918,
+			28.5435
+		],
+		[
+			32.8387,
+			36.5464
+		],
+		[
+			40.144,
+			44.5126
+		],
+		[
+			48.0735,
+			52.5889
+		],
+		[
+			56.5536,
+			60.4817
+		]
+	],
+	"music": "res://music/part3.wav",
+	"title": "C-Level_3 Up",
+	"zone": "NORMAL"
 }

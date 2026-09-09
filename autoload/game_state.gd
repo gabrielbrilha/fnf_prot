@@ -7,7 +7,7 @@ const FALL_TIME: float = 2.2
 
 # Master switch for the in-game level editor: the "Level Editor" menu button and
 # the per-song pencil (edit) buttons all check this.
-const EDITOR_ENABLED: bool = false
+const EDITOR_ENABLED: bool = true
 
 var selected_song_id: String = ""
 
