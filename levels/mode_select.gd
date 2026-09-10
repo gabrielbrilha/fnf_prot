@@ -87,13 +87,15 @@ func _build_calibrate_button() -> void:
 
 func _on_difficulty_selected(difficulty_id: String) -> void:
 	GameState.selected_difficulty = difficulty_id
-	GameState.calibrate_direction = -1   # only calibrate mode remaps lanes
+	GameState.calibrate_level = -1
+	GameState.calibrate_mode = ""
 	get_tree().change_scene_to_file(SONG_SELECT_SCENE)
 
-# Calibrate first asks which direction to calibrate, then shows the songs.
+# Calibrate opens the level picker (Level 1 / Level 2 / Level 3).
 func _on_calibrate_pressed() -> void:
 	GameState.selected_difficulty = GameState.CALIBRATE_ID
-	GameState.calibrate_direction = -1
+	GameState.calibrate_level = -1
+	GameState.calibrate_mode = ""
 	get_tree().change_scene_to_file(CALIBRATE_SELECT_SCENE)
 
 func _on_editor_pressed() -> void:

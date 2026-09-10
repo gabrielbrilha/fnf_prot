@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://calibrate_music_sel"]
+
+[ext_resource type="Texture2D" uid="uid://de66cbmvocex0" path="res://art/background.png" id="1_bg"]
+[ext_resource type="Script" path="res://levels/calibrate_music_select.gd" id="2_script"]
+
+[node name="CalibrateMusicSelect" type="Control" unique_id=480791100]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_script")
+
+[node name="Background" type="TextureRect" parent="." unique_id=339989010]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_bg")
+expand_mode = 1
+stretch_mode = 6

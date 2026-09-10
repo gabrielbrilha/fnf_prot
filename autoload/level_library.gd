@@ -230,4 +230,3 @@ func _load_json(path: String) -> Dictionary:
 	f.close()
 	var parsed = JSON.parse_string(txt)
 	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
-

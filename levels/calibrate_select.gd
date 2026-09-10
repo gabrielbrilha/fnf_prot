@@ -1,27 +1,18 @@
 extends Control
 
-# Calibrate direction picker. Reached from the main-menu "Calibrate" button.
-# Shows the four play arrows (Left / Down / Up / Right) in a horizontal row plus
-# a Back button to the main menu. Picking an arrow stores that direction and
-# opens the calibrate song list, where every calibrate chart plays on that one
-# lane (see GameState.effective_fk_times).
+# Calibrate level picker. Reached from the main-menu "Calibrate" button.
+# Shows Level 1 / Level 2 / Level 3 buttons plus a Back button.
+# Picking a level stores the calibrate_level in GameState and opens the
+# music-mode picker (calibrate_music_select).
 
-const SONG_SELECT_SCENE: String = "res://levels/song_select.tscn"
+const MUSIC_SELECT_SCENE: String = "res://levels/calibrate_music_select.tscn"
 const MODE_SELECT_SCENE: String = "res://levels/mode_select.tscn"
 const HUD_FONT := preload("res://art/BubbleBoomRegular-e96nn.ttf")
-const ARROWS := preload("res://art/arrows.webp")
 
-# arrows.webp is a 4x3 sprite sheet; row 0 holds the arrow icons.
-const SHEET_COLS: int = 4
-const SHEET_ROWS: int = 3
-
-# Lane index -> arrow-sheet frame (row 0). Matches the in-game lanes:
-# 0 = Left/Q, 1 = Down/W, 2 = Up/E, 3 = Right/R.
-var directions: Array[Dictionary] = [
-	{"lane": 0, "frame": 0, "name": "Left"},
-	{"lane": 1, "frame": 1, "name": "Down"},
-	{"lane": 2, "frame": 2, "name": "Up"},
-	{"lane": 3, "frame": 3, "name": "Right"},
+var levels: Array[Dictionary] = [
+	{"num": 1, "label": "Level 1", "color": Color("47d147")},
+	{"num": 2, "label": "Level 2", "color": Color("f2c811")},
+	{"num": 3, "label": "Level 3", "color": Color("ff4a4a")},
 ]
 
 func _ready() -> void:
@@ -30,55 +21,50 @@ func _ready() -> void:
 	add_child(center)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 24)
+	vbox.add_theme_constant_override("separation", 20)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "Calibrate Direction"
+	title.text = "Select Level"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_override("font", HUD_FONT)
 	title.add_theme_font_size_override("font_size", 40)
 	vbox.add_child(title)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_child(row)
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 8)
+	vbox.add_child(spacer)
 
-	for dir in directions:
+	for lvl in levels:
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(110, 110)
-		button.icon = _arrow_icon(dir["frame"])
-		button.expand_icon = true
-		button.tooltip_text = dir["name"]
-		button.pressed.connect(_on_direction_selected.bind(dir["lane"]))
-		row.add_child(button)
+		button.text = lvl["label"]
+		button.custom_minimum_size = Vector2(300, 64)
+		button.add_theme_font_override("font", HUD_FONT)
+		button.add_theme_font_size_override("font_size", 36)
+		var color: Color = lvl["color"]
+		button.add_theme_color_override("font_color", color)
+		button.add_theme_color_override("font_hover_color", color)
+		button.add_theme_color_override("font_pressed_color", color)
+		button.add_theme_color_override("font_focus_color", color)
+		button.pressed.connect(_on_level_selected.bind(lvl["num"]))
+		vbox.add_child(button)
 
 	var back := Button.new()
 	back.text = "Back"
 	back.custom_minimum_size = Vector2(300, 48)
 	back.add_theme_font_override("font", HUD_FONT)
-	back.add_theme_font_size_override("font_size", 32)
+	back.add_theme_font_size_override("font_size", 28)
 	back.pressed.connect(_on_back_pressed)
 	vbox.add_child(back)
 
-# Build a single-arrow texture from the sprite sheet for the given frame.
-func _arrow_icon(frame_idx: int) -> AtlasTexture:
-	var fw := float(ARROWS.get_width()) / SHEET_COLS
-	var fh := float(ARROWS.get_height()) / SHEET_ROWS
-	var col := frame_idx % SHEET_COLS
-	var r := int(frame_idx / SHEET_COLS)
-	var atlas := AtlasTexture.new()
-	atlas.atlas = ARROWS
-	atlas.region = Rect2(col * fw, r * fh, fw, fh)
-	return atlas
-
-func _on_direction_selected(lane: int) -> void:
+func _on_level_selected(level_num: int) -> void:
 	GameState.selected_difficulty = GameState.CALIBRATE_ID
-	GameState.calibrate_direction = lane
-	get_tree().change_scene_to_file(SONG_SELECT_SCENE)
+	GameState.calibrate_level = level_num
+	GameState.calibrate_mode = ""
+	get_tree().change_scene_to_file(MUSIC_SELECT_SCENE)
 
 func _on_back_pressed() -> void:
-	GameState.calibrate_direction = -1
+	GameState.calibrate_level = -1
+	GameState.calibrate_mode = ""
 	get_tree().change_scene_to_file(MODE_SELECT_SCENE)
